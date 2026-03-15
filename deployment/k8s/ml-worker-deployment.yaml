@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: comments-ml-worker
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: comments-ml-worker
+  template:
+    metadata:
+      labels:
+        app: comments-ml-worker
+    spec:
+      containers:
+        - name: ml-worker
+          image: your-registry/comments-ml-worker:beta
+          ports:
+            - containerPort: 8000
+          env:
+            - name: KAFKA_BOOTSTRAP
+              value: kafka:9092
+            - name: ML_TASKS_TOPIC
+              value: comments.ml_tasks
+            - name: ML_RESULTS_TOPIC
+              value: comments.ml_results
+            - name: INFER_BATCH_SIZE
+              value: "512"
+          resources:
+            requests:
+              cpu: "1"
+              memory: "2Gi"
+            limits:
+              cpu: "4"
+              memory: "8Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: comments-ml-worker
+spec:
+  selector:
+    app: comments-ml-worker
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: comments-ml-worker-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: comments-ml-worker
+  minReplicas: 4
+  maxReplicas: 100
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
