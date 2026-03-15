@@ -1,0 +1,29 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: spark-comment-pipeline
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: spark
+          image: your-registry/comments-spark:beta
+          env:
+            - name: KAFKA_BOOTSTRAP
+              value: kafka:9092
+            - name: RAW_TOPIC
+              value: comments.raw
+            - name: CLEANED_TOPIC
+              value: comments.cleaned
+            - name: ML_TASKS_TOPIC
+              value: comments.ml_tasks
+            - name: CHECKPOINT_BASE
+              value: s3a://comment-pipeline-checkpoints
+          resources:
+            requests:
+              cpu: "2"
+              memory: "4Gi"
+            limits:
+              cpu: "8"
+              memory: "16Gi"
